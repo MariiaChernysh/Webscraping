@@ -1,0 +1,72 @@
+library(tm)
+library(wordcloud)
+library(RCurl)
+
+invest<-read.csv("invest.csv", sep=";")
+
+summary<-invest$Summary
+keywords<-invest$Keyword
+title<-invest$Title
+searchterm<-c(invest$KW, invest$KW1, invest$KW2)
+str(c(summary, keywords, title, searchterm))
+
+summary1 <- Corpus(VectorSource(summary))
+inspect(summary1)
+keywords1 <- Corpus(VectorSource(keywords))
+inspect(keywords1)
+title1 <- Corpus(VectorSource(title))
+inspect(title1)
+searchterm1 <- Corpus(VectorSource(searchterm))
+inspect(searchterm1)
+
+terms1<-searchterm1
+terms1 <- tm_map(terms1,content_transformer(tolower))
+terms1 <- tm_map(terms1, removePunctuation)
+terms1 <- tm_map(terms1, removeWords, stopwords("russian"))
+terms1 <- tm_map(terms1, removeWords, stopwords("english"))
+terms1 <- tm_map(terms1, removeWords, stopwords("german"))
+terms1 <- tm_map(terms1, removeWords, stopwords("italian"))
+terms1 <- tm_map(terms1, stripWhitespace)
+terms1 <- tm_map(terms1, removeNumbers)
+
+
+col=brewer.pal(6,"Dark2")
+wordcloud(summary1, min.freq=1, scale=c(3,1),rot.per = 0.5,
+          random.color=T, max.word=100, random.order=F,colors=col)
+######################################################################
+
+st<-read.csv("searchterms.csv", sep=";")
+st<-st$KW
+
+summary1 <- Corpus(VectorSource(st))
+summary1 <- tm_map(summary1,content_transformer(tolower))
+summary1 <- tm_map(summary1, removePunctuation)
+summary1 <- tm_map(summary1, removeWords, stopwords("russian"))
+summary1 <- tm_map(summary1, removeWords, stopwords("english"))
+summary1 <- tm_map(summary1, removeWords, stopwords("german"))
+summary1 <- tm_map(summary1, removeWords, stopwords("italian"))
+summary1 <- tm_map(summary1, stripWhitespace) # doesn't work. delete empty rows by hand!!!!
+summary1 <- tm_map(summary1, removeNumbers)
+inspect(summary1)
+#Dendogram of most common words. Create matrix
+matrix1 <- TermDocumentMatrix(summary1)
+# Remove sparse terms         
+findFreqTerms(matrix1 , lowfreq = 10)
+spatse <- removeSparseTerms(matrix1, sparse = 0.99)
+#scale it
+scale1 <- scale(spatse)
+#calculate the distance for clustering
+ecliddist <- dist(scale1, method = "euclidean")
+#use hierarchical clustering
+clusters <- hclust(ecliddist)
+
+# Create Dendrogram
+par(mai=c(1,0.5,1,0.1))
+plot(clusters, hang=-1, cex=0.6, xlab="", sub="", col.main="white")
+
+hcd <- as.dendrogram(clusters)
+plot(hcd, xlim = c(1, 50), ylim = c(1,60))
+
+
+
+
